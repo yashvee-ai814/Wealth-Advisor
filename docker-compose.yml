@@ -1,0 +1,26 @@
+version: '3.9'
+
+services:
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      # Hot-reload: sync source changes into the container without rebuild
+      - ./frontend/src:/app/src
+
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      - frontend
+    environment:
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - OLLAMA_MODEL=gpt-oss:120b-cloud
+    # Required on Linux/Docker Desktop to reach the Mac host from inside a container
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
