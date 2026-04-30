@@ -15,8 +15,6 @@ services:
       context: ./backend
     ports:
       - "8000:8000"
-    depends_on:
-      - frontend
     environment:
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
       - OLLAMA_MODEL=gpt-oss:120b-cloud
