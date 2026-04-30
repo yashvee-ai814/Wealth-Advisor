@@ -1,30 +1,31 @@
-from pydantic import BaseModel, Field
+from __future__ import annotations
+
 from typing import Literal
+from pydantic import BaseModel
 
 
-class AdvisorRequest(BaseModel):
-    age: int = Field(ge=18, le=79)
-    retirement_age: int = Field(ge=51, le=80)
-    current_salary: float = Field(gt=0)
-    current_pot: float = Field(ge=0)
-    monthly_contribution: float = Field(ge=0)
-    employer_contribution: float = Field(ge=0)
-    retirement_income_goal: float = Field(gt=0)
+class ToolCallInfo(BaseModel):
+    name: str
+    args: dict
+    result: str | None = None
 
 
-class ActionStep(BaseModel):
-    priority: Literal["high", "medium", "low"]
-    action: str
-    reason: str
+class PendingInterrupt(BaseModel):
+    type: Literal["tool_approval", "clarification"]
+    tool_calls: list[ToolCallInfo] = []
+    question: str | None = None
 
 
-class AdvisorResponse(BaseModel):
-    readiness_score: int = Field(ge=0, le=100)
-    readiness_label: Literal["On track", "Needs attention", "At risk"]
-    projected_pot: float
-    projected_annual_income: float
-    shortfall: float
-    years_to_retirement: int
-    summary: str
-    action_steps: list[ActionStep] = Field(max_length=4)
-    disclaimer: str
+class ChatRequest(BaseModel):
+    session_id: str
+    message: str | None = None
+    resume_input: dict | None = None
+    auto_approve_tools: bool = False
+
+
+class ChatResponse(BaseModel):
+    session_id: str
+    reply: str
+    status: Literal["complete", "awaiting_tool_approval", "awaiting_clarification"]
+    pending_interrupt: PendingInterrupt | None = None
+    tool_calls_used: list[ToolCallInfo] = []
