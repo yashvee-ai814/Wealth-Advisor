@@ -1,7 +1,7 @@
 [project]
-name = "retirement-advisor-backend"
+name = "wealth-advisor-backend"
 version = "0.1.0"
-description = "Retirement Readiness Advisor - FastAPI Backend"
+description = "Wealth Advisor Chatbot - FastAPI Backend with LangGraph agent and MCP tools"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi",
@@ -10,6 +10,9 @@ dependencies = [
     "pydantic-settings",
     "httpx",
     "python-dotenv",
+    "langgraph>=0.2",
+    "langchain-core>=0.3",
+    "langchain-ollama>=0.1",
 ]
 
 [build-system]
