@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import ChatWindow from './components/ChatWindow.jsx'
-import ChatInput from './components/ChatInput.jsx'
-import Sidebar from './components/Sidebar.jsx'
+import ChatWindow from './components/chat/ChatWindow.jsx'
+import ChatInput from './components/chat/ChatInput.jsx'
+import Sidebar from './components/chat/Sidebar.jsx'
 import { sendMessage, resumeInterrupt } from './api/chat.ts'
 import { useTheme } from './context/ThemeContext.jsx'
 

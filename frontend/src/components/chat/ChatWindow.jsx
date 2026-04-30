@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import MessageBubble from './MessageBubble.jsx'
-import ToolCallMessage from './ToolCallMessage.jsx'
-import ToolApprovalCard from './ToolApprovalCard.jsx'
+import ToolCallMessage from '../tools/ToolCallMessage.jsx'
+import ToolApprovalCard from '../tools/ToolApprovalCard.jsx'
 import WelcomeScreen from './WelcomeScreen.jsx'
 
 export default function ChatWindow({ messages, pendingInterrupt, loading, onApprove, onReject, onSend }) {
