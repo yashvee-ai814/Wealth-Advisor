@@ -11,10 +11,20 @@ export interface PendingInterrupt {
 }
 
 export interface ChatMessage {
-  role: 'user' | 'assistant'
-  content: string
+  role: 'user' | 'assistant' | 'tool_calls'
+  content?: string
+  tools?: ToolCallInfo[]
   toolCallsUsed?: ToolCallInfo[]
+  isQuestion?: boolean
   timestamp: number
+}
+
+export interface Session {
+  id: string
+  title: string
+  messages: ChatMessage[]
+  createdAt: number
+  updatedAt: number
 }
 
 export interface ChatResponse {

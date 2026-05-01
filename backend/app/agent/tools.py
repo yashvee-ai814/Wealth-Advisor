@@ -1,17 +1,103 @@
+from pydantic import BaseModel, Field
 from langchain_core.tools import tool
 from langgraph.types import interrupt
 
-from .models import (
-    ProjectedPotInput, ProjectedPotOutput,
-    DrawdownIncomeInput, DrawdownIncomeOutput,
-    MonthlySavingsInput, MonthlySavingsOutput,
-    ShortfallInput, ShortfallOutput,
-    ReadinessScoreInput, ReadinessScoreOutput,
-    InflationAdjustedGoalInput, InflationAdjustedGoalOutput,
-    StatePensionInput, StatePensionOutput,
-    AskHumanInput,
-)
 
+# ── Input / Output models ────────────────────────────────────────────────────
+
+class ProjectedPotInput(BaseModel):
+    current_pot: float = Field(ge=0, description="Current pension pot value in GBP")
+    monthly_personal: float = Field(ge=0, description="Monthly personal contribution in GBP")
+    monthly_employer: float = Field(ge=0, description="Monthly employer contribution in GBP")
+    annual_growth_rate: float = Field(gt=0, le=1, description="Expected annual growth rate as a decimal, e.g. 0.05 for 5%")
+    years: int = Field(gt=0, description="Number of years until retirement")
+
+
+class ProjectedPotOutput(BaseModel):
+    projected_pot: float
+    total_contributions: float
+    total_growth: float
+    formula: str = "FV = PV*(1+r)^n + PMT_annual*((1+r)^n - 1)/r"
+
+
+class DrawdownIncomeInput(BaseModel):
+    pot_value: float = Field(gt=0, description="Total pension pot value in GBP at retirement")
+    drawdown_rate: float = Field(gt=0, le=1, description="Annual drawdown rate as decimal, e.g. 0.035 for 3.5%")
+    state_pension_annual: float = Field(ge=0, description="Annual UK state pension amount in GBP (0 if not yet eligible)")
+
+
+class DrawdownIncomeOutput(BaseModel):
+    annual_income: float
+    drawdown_from_pot: float
+    state_pension_contribution: float
+    formula: str = "annual_income = pot * drawdown_rate + state_pension"
+
+
+class MonthlySavingsInput(BaseModel):
+    target_pot: float = Field(gt=0, description="Target pension pot value at retirement in GBP")
+    current_pot: float = Field(ge=0, description="Current pension pot value in GBP")
+    annual_growth_rate: float = Field(gt=0, le=1, description="Expected annual growth rate as decimal")
+    years: int = Field(gt=0, description="Number of years until retirement")
+
+
+class MonthlySavingsOutput(BaseModel):
+    monthly_savings_needed: float
+    total_to_accumulate: float
+    formula: str = "PMT = (target - PV*(1+r)^n) * r / ((1+r)^n - 1) / 12"
+
+
+class ShortfallInput(BaseModel):
+    income_goal: float = Field(gt=0, description="Target annual retirement income in GBP")
+    projected_annual_income: float = Field(ge=0, description="Projected annual retirement income in GBP")
+
+
+class ShortfallOutput(BaseModel):
+    shortfall: float
+    surplus: float
+    is_on_track: bool
+    formula: str = "shortfall = max(0, income_goal - projected_income)"
+
+
+class ReadinessScoreInput(BaseModel):
+    projected_income: float = Field(ge=0, description="Projected annual retirement income in GBP")
+    income_goal: float = Field(gt=0, description="Target annual retirement income in GBP")
+
+
+class ReadinessScoreOutput(BaseModel):
+    score: int = Field(ge=0, le=100)
+    label: str
+    formula: str = "score = min(100, int(projected/goal * 100))"
+
+
+class InflationAdjustedGoalInput(BaseModel):
+    current_goal: float = Field(gt=0, description="Current annual income goal in GBP in today's money")
+    inflation_rate: float = Field(gt=0, le=1, description="Annual inflation rate as decimal, e.g. 0.025 for 2.5%")
+    years: int = Field(gt=0, description="Number of years until retirement")
+
+
+class InflationAdjustedGoalOutput(BaseModel):
+    adjusted_goal: float
+    inflation_uplift: float
+    formula: str = "FV = current_goal * (1 + inflation_rate)^years"
+
+
+class StatePensionInput(BaseModel):
+    current_age: int = Field(ge=18, le=79, description="Current age in years")
+    retirement_age: int = Field(ge=51, le=80, description="Planned retirement age")
+
+
+class StatePensionOutput(BaseModel):
+    annual_state_pension: float
+    eligible_from_age: int
+    years_until_eligible: int
+    note: str
+
+
+class AskHumanInput(BaseModel):
+    question: str = Field(min_length=1, description="The clarifying question to ask the user")
+
+
+# ── Tool definitions ─────────────────────────────────────────────────────────
 
 @tool(args_schema=ProjectedPotInput)
 def calculate_projected_pot(
@@ -30,12 +116,10 @@ def calculate_projected_pot(
     r = annual_growth_rate
     n = years
     pmt_annual = (monthly_personal + monthly_employer) * 12
-
     growth_factor = (1 + r) ** n
     projected_pot = current_pot * growth_factor + pmt_annual * (growth_factor - 1) / r
     total_contributions = current_pot + pmt_annual * n
     total_growth = projected_pot - total_contributions
-
     return ProjectedPotOutput(
         projected_pot=round(projected_pot, 2),
         total_contributions=round(total_contributions, 2),
@@ -56,7 +140,6 @@ def calculate_drawdown_income(
     """
     drawdown_from_pot = pot_value * drawdown_rate
     annual_income = drawdown_from_pot + state_pension_annual
-
     return DrawdownIncomeOutput(
         annual_income=round(annual_income, 2),
         drawdown_from_pot=round(drawdown_from_pot, 2),
@@ -80,13 +163,10 @@ def calculate_monthly_savings_needed(
     n = years
     growth_factor = (1 + r) ** n
     remaining = target_pot - current_pot * growth_factor
-
     if remaining <= 0:
         monthly = 0.0
     else:
-        annual_pmt = remaining * r / (growth_factor - 1)
-        monthly = annual_pmt / 12
-
+        monthly = remaining * r / (growth_factor - 1) / 12
     return MonthlySavingsOutput(
         monthly_savings_needed=round(max(0.0, monthly), 2),
         total_to_accumulate=round(max(0.0, remaining), 2),
@@ -106,7 +186,6 @@ def calculate_shortfall(
     diff = income_goal - projected_annual_income
     shortfall = max(0.0, diff)
     surplus = max(0.0, -diff)
-
     return ShortfallOutput(
         shortfall=round(shortfall, 2),
         surplus=round(surplus, 2),
@@ -126,13 +205,7 @@ def calculate_readiness_score(
     Formula: score = min(100, int(projected / goal * 100))
     """
     score = min(100, int(projected_income / income_goal * 100))
-    if score >= 70:
-        label = "On track"
-    elif score >= 40:
-        label = "Needs attention"
-    else:
-        label = "At risk"
-
+    label = "On track" if score >= 70 else "Needs attention" if score >= 40 else "At risk"
     return ReadinessScoreOutput(score=score, label=label).model_dump()
 
 
@@ -150,7 +223,6 @@ def calculate_inflation_adjusted_goal(
     """
     adjusted_goal = current_goal * ((1 + inflation_rate) ** years)
     uplift = adjusted_goal - current_goal
-
     return InflationAdjustedGoalOutput(
         adjusted_goal=round(adjusted_goal, 2),
         inflation_uplift=round(uplift, 2),

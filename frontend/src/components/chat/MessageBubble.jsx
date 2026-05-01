@@ -1,5 +1,5 @@
 import FormattedMessage from './FormattedMessage.jsx'
-import ToolCallBadge from './ToolCallBadge.jsx'
+import ToolCallBadge from '../shared/ToolCallBadge.jsx'
 
 export default function MessageBubble({ message }) {
   const isUser = message.role === 'user'

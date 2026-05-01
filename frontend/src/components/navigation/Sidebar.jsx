@@ -20,7 +20,6 @@ export default function Sidebar({ sessions, currentSessionId, onSelectSession, o
 
   return (
     <div className="w-64 shrink-0 flex flex-col h-full border-r bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-800">
-      {/* Logo */}
       <div className="px-4 py-5 border-b border-slate-200 dark:border-slate-800">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center shadow-md shadow-amber-500/20">
@@ -37,7 +36,6 @@ export default function Sidebar({ sessions, currentSessionId, onSelectSession, o
         </div>
       </div>
 
-      {/* New Chat */}
       <div className="px-3 py-3">
         <button
           onClick={onNewChat}
@@ -50,7 +48,6 @@ export default function Sidebar({ sessions, currentSessionId, onSelectSession, o
         </button>
       </div>
 
-      {/* Session list */}
       <div className="flex-1 overflow-y-auto px-2 pb-4">
         {sessions.length === 0 ? (
           <p className="text-xs text-center mt-6 text-slate-400 dark:text-slate-600">No previous chats</p>
@@ -95,7 +92,6 @@ export default function Sidebar({ sessions, currentSessionId, onSelectSession, o
         )}
       </div>
 
-      {/* Footer */}
       <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-800">
         <p className="text-xs text-slate-400 dark:text-slate-600 text-center leading-relaxed">
           Not financial advice · Local AI

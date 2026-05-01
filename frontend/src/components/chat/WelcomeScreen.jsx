@@ -92,7 +92,6 @@ const COLOUR_MAP = {
 export default function WelcomeScreen({ onSend }) {
   return (
     <div className="flex flex-col items-center justify-start px-4 py-8 max-w-4xl mx-auto w-full">
-      {/* Hero */}
       <div className="mb-8 text-center">
         <div className="flex justify-center mb-4">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center shadow-xl shadow-amber-500/25">
@@ -109,7 +108,6 @@ export default function WelcomeScreen({ onSend }) {
         <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md mx-auto leading-relaxed">
           Powered by local AI with deterministic financial calculations. Ask anything about retirement, pensions, savings, and wealth planning.
         </p>
-        {/* Mini chart */}
         <div className="flex justify-center mt-5">
           <svg viewBox="0 0 280 60" className="w-56 h-12 opacity-60">
             <defs>
@@ -128,7 +126,6 @@ export default function WelcomeScreen({ onSend }) {
         </div>
       </div>
 
-      {/* Scenario cards */}
       <div className="w-full">
         <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 text-center">Example scenarios</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">

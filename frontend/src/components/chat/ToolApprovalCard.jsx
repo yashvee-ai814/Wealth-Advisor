@@ -23,9 +23,7 @@ export default function ToolApprovalCard({ pendingInterrupt, onApprove, onReject
           </svg>
         </div>
         <div>
-          <p className="text-sm font-semibold text-amber-300">
-            Calculation approval required
-          </p>
+          <p className="text-sm font-semibold text-amber-300">Calculation approval required</p>
           <p className="text-xs text-slate-400">{count} tool{count !== 1 ? 's' : ''} ready to run</p>
         </div>
       </div>

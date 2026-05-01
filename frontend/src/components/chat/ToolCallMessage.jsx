@@ -15,7 +15,6 @@ export default function ToolCallMessage({ tools }) {
 
   return (
     <div className="flex justify-start mb-3">
-      {/* Left indent to align under assistant avatar */}
       <div className="w-8 shrink-0 mr-2.5" />
       <div className="max-w-[78%] w-full">
         <div className="rounded-xl border overflow-hidden bg-slate-50 border-slate-200 dark:bg-slate-900/60 dark:border-slate-700/50">
