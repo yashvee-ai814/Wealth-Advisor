@@ -10,36 +10,50 @@ An AI-powered UK wealth and retirement planning chatbot. Have a natural conversa
 - **Human-in-the-loop** — before any calculation runs, you see the tool and its inputs and can approve or reject
 - **Clarification flow** — when the AI needs missing data mid-conversation, it pauses and asks you
 
+---
+
 ## Architecture
 
-Three microservices wired together with Docker Compose:
+```mermaid
+graph TD
+    User(["👤 Browser :5173"])
+    FE["⚛️ Frontend\nReact + Vite + Tailwind"]
+    BE["🐍 Backend\nFastAPI + LangGraph"]
+    OL["🤖 Ollama\ngpt-oss:120b-cloud\n(Mac host :11434)"]
 
-- **frontend** — React 18 + Vite + Tailwind CSS, served on port 5173
-- **backend** — Python FastAPI + LangGraph agent + 8 MCP tools, served on port 8000
-- **ollama** — runs natively on your Mac (outside Docker); backend reaches it via `host.docker.internal:11434`
+    User -->|"HTTP"| FE
+    FE -->|"POST /chat"| BE
+    BE -->|"ChatOllama\nOpenAI-compatible"| OL
 
+    subgraph agent ["LangGraph Agent Graph"]
+        AN["agent_node\n(LLM decides tools)"]
+        HA["human_approval_node\n(interrupt — await user)"]
+        TN["ToolNode\n(execute tools)"]
+
+        AN -->|"tool calls\n(non-ask_human)"| HA
+        AN -->|"ask_human call"| TN
+        AN -->|"no tools"| END(["END"])
+        HA -->|"approved"| TN
+        HA -->|"rejected → ToolMessages"| AN
+        TN -->|"results"| AN
+    end
+
+    BE --> agent
 ```
-Browser → frontend:5173  →  backend:8000  →  Ollama (Mac host):11434
-```
 
-### LangGraph agent graph
+### Service ports
 
-```
-User message
-    │
-    ▼
-agent_node  ──► human_approval_node ──► tools_node ──► agent_node (loop)
-    │                                       ▲
-    └──► ask_human tool → interrupt() ──────┘
-    │
-    └──► END (final reply)
-```
+| Service | Port | Description |
+|---------|------|-------------|
+| frontend | 5173 | React dev server (Vite) |
+| backend | 8000 | FastAPI REST API |
+| ollama | 11434 | LLM runtime on Mac host |
 
-### MCP tools (all pure Python math — no LLM in calculations)
+### MCP tools (pure Python math — no LLM in calculations)
 
 | Tool | Formula |
 |------|---------|
-| `calculate_projected_pot` | Future value annuity: `FV = PV*(1+r)^n + PMT*((1+r)^n-1)/r` |
+| `calculate_projected_pot` | `FV = PV*(1+r)^n + PMT*((1+r)^n-1)/r` |
 | `calculate_drawdown_income` | `income = pot * drawdown_rate + state_pension` |
 | `calculate_monthly_savings_needed` | Rearranged FV annuity for PMT |
 | `calculate_shortfall` | `max(0, income_goal - projected_income)` |
@@ -47,6 +61,8 @@ agent_node  ──► human_approval_node ──► tools_node ──► agent_n
 | `calculate_inflation_adjusted_goal` | `FV = goal * (1 + inflation)^years` |
 | `get_uk_state_pension_info` | £11,502/yr from age 67 lookup |
 | `ask_human` | Triggers `interrupt()` to pause for clarification |
+
+---
 
 ## Prerequisites
 
@@ -60,19 +76,20 @@ agent_node  ──► human_approval_node ──► tools_node ──► agent_n
   ollama pull gpt-oss:120b-cloud
   ```
 
+---
+
 ## How to run (Docker)
 
-**Step 1:** Start Ollama on your Mac:
 ```bash
+# Step 1 — start Ollama on your Mac
 ollama serve
-```
 
-**Step 2:** Start the full app:
-```bash
+# Step 2 — build and start all services
 docker compose up --build
-```
 
-**Step 3:** Open [http://localhost:5173](http://localhost:5173)
+# Step 3 — open the app
+open http://localhost:5173
+```
 
 ---
 
@@ -103,47 +120,54 @@ Wealth-Advisor/
 ├── .env.example
 ├── README.md
 │
-├── frontend/
-│   ├── Dockerfile
-│   ├── package.json
-│   ├── vite.config.ts
-│   ├── tailwind.config.js
-│   ├── tsconfig.json
-│   ├── index.html
-│   └── src/
-│       ├── main.jsx
-│       ├── App.jsx
-│       ├── index.css
-│       ├── api/
-│       │   ├── advisor.ts        ← legacy single-turn assess endpoint
-│       │   └── chat.ts           ← conversational chat + interrupt resume
-│       ├── types/
-│       │   ├── advisor.ts        ← legacy types
-│       │   └── chat.ts           ← ChatMessage, ChatResponse, PendingInterrupt
-│       └── components/
-│           ├── ChatWindow.jsx    ← scrollable message list
-│           ├── ChatInput.jsx     ← textarea + send button
-│           ├── MessageBubble.jsx ← user / assistant bubbles
-│           ├── ToolCallBadge.jsx ← chip showing which tool was used
-│           ├── ToolApprovalCard.jsx ← approve/reject before tool execution
-│           ├── ClarificationCard.jsx ← answer agent's mid-flow question
-│           ├── AdvisorForm.jsx   ← legacy form (powers /assess)
-│           ├── ResultCard.jsx    ← legacy result card
-│           └── LoadingSpinner.jsx
-│
 ├── backend/
 │   ├── Dockerfile
 │   ├── pyproject.toml
 │   └── app/
-│       ├── __init__.py
-│       ├── main.py           ← FastAPI app + CORS
-│       ├── router.py         ← /health, /assess (legacy), /chat
-│       ├── models.py         ← legacy Pydantic models for /assess
-│       ├── chat_models.py    ← ChatRequest, ChatResponse, PendingInterrupt
-│       ├── tools.py          ← 8 MCP tools with Pydantic input/output models
-│       ├── agent.py          ← LangGraph StateGraph with HIL interruption
-│       ├── llm.py            ← legacy direct LLM call for /assess
-│       └── config.py         ← pydantic-settings (OLLAMA_BASE_URL, OLLAMA_MODEL)
+│       ├── main.py          ← FastAPI app + CORS
+│       ├── router.py        ← /health, /chat, DELETE /chat/{id}
+│       ├── models.py        ← all Pydantic models (ChatRequest, ChatResponse, …)
+│       ├── config.py        ← pydantic-settings (OLLAMA_BASE_URL, OLLAMA_MODEL)
+│       ├── llm.py           ← ChatOllama client builder
+│       ├── data/
+│       │   └── prompts.json ← system prompt
+│       └── agent/
+│           ├── __init__.py  ← exports graph
+│           ├── state.py     ← WealthAdvisorState (LangGraph state)
+│           ├── tools.py     ← 8 MCP tools with Pydantic I/O models
+│           ├── nodes.py     ← agent_node, human_approval_node, routing functions
+│           └── graph.py     ← StateGraph assembly + compiled graph
+│
+└── frontend/
+    ├── Dockerfile
+    ├── package.json
+    ├── vite.config.ts
+    ├── tailwind.config.js
+    ├── index.html
+    └── src/
+        ├── main.jsx
+        ├── App.jsx          ← root component + session management
+        ├── index.css
+        ├── api/
+        │   └── chat.ts      ← sendMessage, resumeInterrupt, clearChat
+        ├── types/
+        │   └── chat.ts      ← TypeScript interfaces mirroring Pydantic models
+        ├── context/
+        │   └── ThemeContext.jsx
+        └── components/
+            ├── chat/        ← UI shell components
+            │   ├── ChatWindow.jsx
+            │   ├── ChatInput.jsx
+            │   ├── MessageBubble.jsx
+            │   ├── FormattedMessage.jsx
+            │   ├── WelcomeScreen.jsx
+            │   ├── Sidebar.jsx
+            │   └── LoadingSpinner.jsx
+            └── tools/       ← agent interaction components
+                ├── ToolApprovalCard.jsx
+                ├── ToolCallMessage.jsx
+                ├── ToolCallBadge.jsx
+                └── ClarificationCard.jsx
 ```
 
 ---
@@ -155,24 +179,24 @@ Wealth-Advisor/
 | GET | `/health` | Health check + active model name |
 | POST | `/chat` | Send a message or resume an interrupt |
 | DELETE | `/chat/{session_id}` | Clear session (start fresh) |
-| POST | `/assess` | Legacy single-turn retirement assessment |
 
-### POST /chat request body
+### POST /chat — send a message
 
 ```json
 {
   "session_id": "session-abc123",
-  "message": "I'm 40, earn £70k, want to retire at 65 with £40k/yr",
-  "resume_input": null
+  "message": "I'm 40, earn £70k, want to retire at 65 with £40k/yr"
 }
 ```
 
-To resume after a tool-approval interrupt:
+### POST /chat — resume after tool-approval interrupt
+
 ```json
 { "session_id": "session-abc123", "resume_input": { "approved": true } }
 ```
 
-To resume after a clarification interrupt:
+### POST /chat — resume after clarification interrupt
+
 ```json
 { "session_id": "session-abc123", "resume_input": { "answer": "My pension pot is £30,000" } }
 ```
@@ -186,8 +210,8 @@ To resume after a clarification interrupt:
 | Language | Python 3.12+ |
 | Web framework | FastAPI |
 | Agent orchestration | LangGraph |
-| LLM integration | langchain-openai (OpenAI-compatible Ollama endpoint) |
-| Validation | Pydantic v2 everywhere (tools, nodes, state, API) |
+| LLM integration | langchain-ollama (OpenAI-compatible) |
+| Validation | Pydantic v2 (tools, nodes, state, API) |
 | Package manager | uv |
 | Frontend | React 18 + Vite 5 + Tailwind CSS v3 |
 | LLM runtime | Ollama (local, no API key) |
