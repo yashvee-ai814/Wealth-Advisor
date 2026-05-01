@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .router import router
+from .routers.v1.llm import router as v1_router
 
 app = FastAPI(title="Wealth Advisor API", version="0.1.0")
 
@@ -12,4 +12,4 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(router)
+app.include_router(v1_router)
