@@ -51,7 +51,7 @@ and follows every rule below without being asked.
 | Model | `gpt-oss:120b-cloud` |
 | Docker URL | `http://host.docker.internal:11434` |
 | Local URL | `http://localhost:11434` |
-| Endpoint | `POST /api/chat` (OpenAI-compatible) |
+| Client | `langchain-ollama` `ChatOllama` (OpenAI-compatible) |
 
 ### Infrastructure
 | Concern | Choice |
@@ -79,11 +79,19 @@ and follows every rule below without being asked.
 │   ├── pyproject.toml
 │   └── app/
 │       ├── __init__.py
-│       ├── main.py        ← FastAPI app creation + CORS only
-│       ├── router.py      ← all route definitions
-│       ├── models.py      ← all Pydantic models
-│       ├── llm.py         ← Ollama call logic + prompt builder
-│       └── config.py      ← pydantic-settings BaseSettings
+│       ├── main.py          ← FastAPI app creation + CORS only
+│       ├── router.py        ← all route definitions
+│       ├── models.py        ← all Pydantic models (request/response)
+│       ├── config.py        ← pydantic-settings BaseSettings
+│       ├── llm.py           ← LLM client builder (ChatOllama)
+│       ├── data/
+│       │   └── prompts.json ← system prompts
+│       └── agent/
+│           ├── __init__.py  ← exports compiled graph
+│           ├── state.py     ← LangGraph state definition
+│           ├── tools.py     ← all tool definitions + ALL_TOOLS list
+│           ├── nodes.py     ← node functions + routing functions
+│           └── graph.py     ← StateGraph assembly + compiled graph
 │
 └── frontend/
     ├── Dockerfile
@@ -97,15 +105,27 @@ and follows every rule below without being asked.
     └── src/
         ├── main.jsx
         ├── App.jsx
-        ├── index.css          ← @tailwind directives only
+        ├── index.css              ← @tailwind directives only
         ├── api/
-        │   └── <feature>.ts   ← typed fetch functions
+        │   └── chat.ts            ← typed fetch functions
         ├── types/
-        │   └── <feature>.ts   ← TypeScript interfaces mirroring Pydantic models
+        │   └── chat.ts            ← TypeScript interfaces mirroring Pydantic models
+        ├── context/
+        │   └── ThemeContext.jsx
         └── components/
-            ├── LoadingSpinner.jsx
-            ├── <Feature>Form.jsx
-            └── ResultCard.jsx
+            ├── chat/              ← UI shell components
+            │   ├── ChatWindow.jsx
+            │   ├── ChatInput.jsx
+            │   ├── MessageBubble.jsx
+            │   ├── FormattedMessage.jsx
+            │   ├── WelcomeScreen.jsx
+            │   ├── Sidebar.jsx
+            │   └── LoadingSpinner.jsx
+            └── tools/             ← agent interaction components
+                ├── ToolApprovalCard.jsx
+                ├── ToolCallMessage.jsx
+                ├── ToolCallBadge.jsx
+                └── ClarificationCard.jsx
 ```
 
 ---
@@ -118,7 +138,8 @@ and follows every rule below without being asked.
 - No extra features, refactors, or abstractions beyond what is asked
 - Pydantic models: always use `Field()` with `ge`, `le`, `gt`, `ge` constraints where applicable
 - FastAPI routes: always `async def`
-- Ollama JSON parsing: always strip ` ```json ` fences before parsing; raise `HTTPException(502)` on failure
+- LangGraph agent: keep state, tools, nodes, and graph in separate files under `agent/`
+- System prompts: always store in `data/prompts.json`, load at node invocation time
 - Frontend API functions: throw descriptive errors that include the HTTP status and body detail
 
 ---
