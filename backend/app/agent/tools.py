@@ -3,10 +3,6 @@ from langchain_core.tools import tool
 from langgraph.types import interrupt
 
 
-# ---------------------------------------------------------------------------
-# Input / Output Pydantic models for every tool
-# ---------------------------------------------------------------------------
-
 class ProjectedPotInput(BaseModel):
     current_pot: float = Field(ge=0, description="Current pension pot value in GBP")
     monthly_personal: float = Field(ge=0, description="Monthly personal contribution in GBP")
@@ -98,10 +94,6 @@ class StatePensionOutput(BaseModel):
 class AskHumanInput(BaseModel):
     question: str = Field(min_length=1, description="The clarifying question to ask the user")
 
-
-# ---------------------------------------------------------------------------
-# Tool definitions
-# ---------------------------------------------------------------------------
 
 @tool(args_schema=ProjectedPotInput)
 def calculate_projected_pot(

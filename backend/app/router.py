@@ -2,16 +2,14 @@ from fastapi import APIRouter, HTTPException
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from langgraph.types import Command
 
-from .models import AdvisorRequest, AdvisorResponse
-from .llm import get_advice
+from .models import ChatRequest, ChatResponse, ToolCallInfo, PendingInterrupt
 from .config import settings
-from .chat_models import ChatRequest, ChatResponse, ToolCallInfo, PendingInterrupt
 from .agent import graph
 
 router = APIRouter()
 
 # ---------------------------------------------------------------------------
-# Guardrail
+# Guardrails
 # ---------------------------------------------------------------------------
 
 _INJECTION_PATTERNS = [
@@ -37,6 +35,7 @@ _WEALTH_HINTS = [
     "can you", "could you", "would you", "please", "i am", "i'm", "my",
 ]
 
+
 def _guardrail(message: str) -> tuple[bool, str]:
     lower = message.lower()
     for p in _INJECTION_PATTERNS:
@@ -50,6 +49,7 @@ def _guardrail(message: str) -> tuple[bool, str]:
         return False, "I specialise in UK wealth planning, retirement, pensions, and savings. Could you rephrase your question in that context?"
     return True, ""
 
+
 def _check_ai_output(reply: str) -> bool:
     lower = reply.lower()
     for p in ["ignore previous", "new instructions:", "[system]", "<script>"]:
@@ -58,14 +58,13 @@ def _check_ai_output(reply: str) -> bool:
     return True
 
 
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
+
 @router.get("/health")
 async def health():
     return {"status": "ok", "model": settings.OLLAMA_MODEL}
-
-
-@router.post("/assess", response_model=AdvisorResponse)
-async def assess(req: AdvisorRequest) -> AdvisorResponse:
-    return await get_advice(req)
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -134,7 +133,6 @@ async def chat(req: ChatRequest) -> ChatResponse:
                 ],
             )
         else:
-            # ask_human clarification interrupt — value is the question string
             question = interrupt_data if isinstance(interrupt_data, str) else str(interrupt_data)
             status = "awaiting_clarification"
             pending_interrupt = PendingInterrupt(type="clarification", question=question)
@@ -164,7 +162,5 @@ async def chat(req: ChatRequest) -> ChatResponse:
 @router.delete("/chat/{session_id}")
 async def clear_chat(session_id: str):
     """Clear conversation history for a session (start fresh)."""
-    config = {"configurable": {"thread_id": session_id}}
-    # MemorySaver doesn't expose delete; we simply return OK.
-    # The frontend will generate a new session_id for a fresh chat.
+    # MemorySaver doesn't expose delete; the frontend generates a new session_id for fresh chats.
     return {"status": "ok", "session_id": session_id}
