@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from langchain_core.messages import BaseMessage, AIMessage, SystemMessage, ToolMessage
 from langgraph.types import interrupt
 
-from ..llm import build_llm
+from .llm import build_llm
 from .state import WealthAdvisorState
 from .tools import ALL_TOOLS
 
