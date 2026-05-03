@@ -4,58 +4,68 @@ React 18 + Vite 5 + Tailwind CSS chat interface for the Wealth Advisor agent. Su
 
 ---
 
-## Tech stack
+## Features
 
-| Concern | Choice |
-|---|---|
-| Framework | React 18 |
-| Build tool | Vite 5 |
-| Styling | Tailwind CSS v3 |
-| Language | JSX (components) + TypeScript (types and API) |
-| Package manager | npm |
+- **Sessions** — multiple conversations stored in `localStorage` under `wa-sessions`, grouped by date in the sidebar
+- **Tool approval** — before any calculation runs, a card shows the tool name and inputs; you approve or reject
+- **Clarification** — when the agent needs missing information, an inline card lets you answer; the reply resumes the workflow
+- **Auto-approve toggle** — skip the approval step and let all tools run automatically
+- **Dark / light mode** — toggled via the header, persisted in `localStorage` under `wa-theme`
+- **Markdown rendering** — bold, italics, code, headings, lists, and readiness score blocks
 
 ---
 
-## Folder structure
+## Component structure
 
 ```
 src/
-├── main.jsx               React root — mounts app with ThemeProvider
-├── App.jsx                Top-level component — renders ChatPage
-├── index.css              Tailwind directives only
+├── main.jsx                        React root entry point
+├── App.jsx                         Top-level component, ThemeContext provider
+├── index.css                       Tailwind directives and custom utilities
 ├── api/
-│   └── chat.ts            Typed fetch functions: sendMessage, resumeInterrupt, clearChat
+│   └── chat.ts                     sendMessage, resumeInterrupt, clearChat
 ├── types/
-│   └── chat.ts            TypeScript interfaces mirroring the backend Pydantic models
+│   └── chat.ts                     TypeScript interfaces mirroring Pydantic models
 ├── context/
-│   └── ThemeContext.jsx   Dark/light mode context — persists preference to localStorage
+│   └── ThemeContext.jsx            Dark/light mode state and toggle
 ├── layouts/
-│   └── AppLayout.jsx      Sidebar + header + error banner wrapper
+│   └── AppLayout.jsx               Sidebar + header + error banner wrapper
 ├── pages/
-│   └── ChatPage.jsx       Session management, message state, and all chat event handlers
+│   └── ChatPage.jsx                Session management, message state, and chat event handlers
 └── components/
     ├── chat/
-    │   ├── ChatWindow.jsx        Message list, loading indicator, interrupt cards
-    │   ├── ChatInput.jsx         Textarea and send button
-    │   ├── MessageBubble.jsx     User/assistant message rendering with tool badges
-    │   ├── ToolCallMessage.jsx   Collapsible display of executed tools and their results
-    │   ├── ToolApprovalCard.jsx  Approve / reject card shown before tool execution
-    │   ├── ClarificationCard.jsx Inline input for answering agent clarifying questions
-    │   ├── WelcomeScreen.jsx     Landing screen with six example scenario cards
-    │   └── FormattedMessage.jsx  Inline markdown, headings, lists, and readiness score blocks
+    │   ├── ChatWindow.jsx          Scrollable message list with loading indicator and interrupt cards
+    │   ├── ChatInput.jsx           Textarea and send button
+    │   ├── MessageBubble.jsx       User/assistant message with tool badges
+    │   ├── FormattedMessage.jsx    Inline markdown, headings, lists, and readiness score blocks
+    │   ├── ToolCallMessage.jsx     Collapsible display of executed tool calls and results
+    │   ├── ToolApprovalCard.jsx    Approve/reject card shown before tool execution
+    │   ├── ClarificationCard.jsx   Inline input for answering agent clarifying questions
+    │   └── WelcomeScreen.jsx       Landing screen with six example scenario cards
     ├── navigation/
-    │   └── Sidebar.jsx           Session list grouped by date, with new-chat and delete
+    │   └── Sidebar.jsx             Session list grouped by date, new chat and delete actions
     └── shared/
-        ├── LoadingSpinner.jsx
-        └── ToolCallBadge.jsx
+        ├── LoadingSpinner.jsx      Animated loading indicator
+        └── ToolCallBadge.jsx       Small inline badge showing a tool name
 ```
+
+---
+
+## Agent interrupt handling
+
+The backend pauses mid-run and returns one of two interrupt types:
+
+| Status | UI component | Action |
+|---|---|---|
+| `awaiting_tool_approval` | `ToolApprovalCard` | Shows tool names and args; user approves or rejects |
+| `awaiting_clarification` | `ClarificationCard` | Inline text input; answer sent back as `resume_input` |
 
 ---
 
 ## Prerequisites
 
 - Node.js 20+
-- npm
+- Backend running at `http://localhost:8000` — see [backend/README.md](../backend/README.md)
 
 ---
 
@@ -67,9 +77,7 @@ npm install
 npm run dev
 ```
 
-The app is available at `http://localhost:5173`. Hot-reload is enabled by default.
-
-The backend must be running at `http://localhost:8000` (see [backend README](../backend/README.md)).
+App available at `http://localhost:5173`. Hot-reload is enabled by default.
 
 ---
 
@@ -84,41 +92,15 @@ Source files are volume-mounted (`./frontend/src:/app/src`) so edits hot-reload 
 
 ---
 
-## Key features
-
-### Sessions
-- Each conversation is a separate session stored in `localStorage` under `wa-sessions`.
-- A new session ID (UUID) is generated client-side on "New Chat".
-- Sessions are grouped by date (Today / Yesterday / Earlier) in the sidebar.
-
-### Agent interrupt handling
-The backend can pause mid-run and return one of two interrupt types:
-
-| Status | UI shown |
-|---|---|
-| `awaiting_tool_approval` | `ToolApprovalCard` — lists tools with expandable args; user approves or rejects |
-| `awaiting_clarification` | `ClarificationCard` — inline text input; answer is sent back as `resume_input` |
-
-### Auto-approve
-A toggle in the header sets `auto_approve_tools: true` on all requests, which tells the backend to skip tool-approval interrupts automatically.
-
-### Dark / light mode
-Preference is toggled via the header button and persisted to `localStorage` under `wa-theme`. The app defaults to dark mode.
-
-### Message formatting
-`FormattedMessage` parses a limited set of markdown inline styles (`**bold**`, `*italic*`, `` `code` ``), headings (`#`, `##`, `###`), and bullet/numbered lists. JSON blocks that contain a `readiness_score` field are rendered as a styled score card.
-
----
-
-## Environment
-
-By default the API base URL is hardcoded to `http://localhost:8000` in `src/api/chat.ts`. Update that constant for other deployment targets.
-
----
-
 ## Build
 
 ```bash
 npm run build   # outputs to dist/
-npm run preview # serves the dist/ build locally
+npm run preview # serves dist/ locally for inspection
 ```
+
+---
+
+## API base URL
+
+Hardcoded to `http://localhost:8000` in `src/api/chat.ts`. Update that constant for other deployment targets.
