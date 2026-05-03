@@ -97,7 +97,7 @@ class AskHumanInput(BaseModel):
     question: str = Field(min_length=1, description="The clarifying question to ask the user")
 
 
-# ── Tool definitions ─────────────────────────────────────────────────────────
+# ── Tool definitions ────────────────────────────────────────────────────────
 
 @tool(args_schema=ProjectedPotInput)
 def calculate_projected_pot(
