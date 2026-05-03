@@ -69,7 +69,6 @@ and follows every rule below without being asked.
 
 ```
 <project-name>/
-├── CLAUDE.md
 ├── docker-compose.yml
 ├── .env.example
 ├── README.md
@@ -78,20 +77,23 @@ and follows every rule below without being asked.
 │   ├── Dockerfile
 │   ├── pyproject.toml
 │   └── app/
-│       ├── __init__.py
 │       ├── main.py          ← FastAPI app creation + CORS only
-│       ├── router.py        ← all route definitions
-│       ├── models.py        ← all Pydantic models (request/response)
-│       ├── config.py        ← pydantic-settings BaseSettings
-│       ├── llm.py           ← LLM client builder (ChatOllama)
+│       ├── session.py       ← WealthAdvisorState, MemorySaver checkpointer, make_config()
+│       ├── core/
+│       │   ├── config.py    ← pydantic-settings BaseSettings
+│       │   ├── logger.py    ← shared logger factory
+│       │   └── middleware.py← HTTP request/response logging
 │       ├── data/
-│       │   └── prompts.json ← system prompts
-│       └── agent/
-│           ├── __init__.py  ← exports compiled graph
-│           ├── state.py     ← LangGraph state definition
-│           ├── tools.py     ← all tool definitions + ALL_TOOLS list
-│           ├── nodes.py     ← node functions + routing functions
-│           └── graph.py     ← StateGraph assembly + compiled graph
+│       │   └── prompts.json ← system prompt + guardrail messages
+│       ├── agent/
+│       │   ├── __init__.py  ← exports compiled graph
+│       │   ├── graph.py     ← StateGraph assembly + compiled graph
+│       │   ├── nodes.py     ← node functions + routing functions
+│       │   └── tools.py     ← all tool definitions + ALL_TOOLS list
+│       └── router/
+│           ├── router.py    ← all route definitions
+│           ├── models.py    ← all Pydantic models (request/response)
+│           └── guardrails.py← input/output safety checks
 │
 └── frontend/
     ├── Dockerfile
@@ -105,27 +107,32 @@ and follows every rule below without being asked.
     └── src/
         ├── main.jsx
         ├── App.jsx
-        ├── index.css              ← @tailwind directives only
+        ├── index.css                  ← @tailwind directives only
         ├── api/
-        │   └── chat.ts            ← typed fetch functions
+        │   └── chat.ts                ← typed fetch functions
         ├── types/
-        │   └── chat.ts            ← TypeScript interfaces mirroring Pydantic models
+        │   └── chat.ts                ← TypeScript interfaces mirroring Pydantic models
         ├── context/
         │   └── ThemeContext.jsx
+        ├── layouts/
+        │   └── AppLayout.jsx          ← sidebar + header shell
+        ├── pages/
+        │   └── ChatPage.jsx           ← session management + chat logic
         └── components/
-            ├── chat/              ← UI shell components
+            ├── chat/                  ← all chat UI components
             │   ├── ChatWindow.jsx
             │   ├── ChatInput.jsx
             │   ├── MessageBubble.jsx
             │   ├── FormattedMessage.jsx
             │   ├── WelcomeScreen.jsx
-            │   ├── Sidebar.jsx
-            │   └── LoadingSpinner.jsx
-            └── tools/             ← agent interaction components
-                ├── ToolApprovalCard.jsx
-                ├── ToolCallMessage.jsx
-                ├── ToolCallBadge.jsx
-                └── ClarificationCard.jsx
+            │   ├── ToolApprovalCard.jsx
+            │   ├── ToolCallMessage.jsx
+            │   └── ClarificationCard.jsx
+            ├── navigation/
+            │   └── Sidebar.jsx        ← session list + new chat
+            └── shared/
+                ├── LoadingSpinner.jsx
+                └── ToolCallBadge.jsx
 ```
 
 ---
