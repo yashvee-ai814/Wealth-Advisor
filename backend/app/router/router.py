@@ -6,7 +6,7 @@ from .models import ChatRequest, ChatResponse, ToolCallInfo, PendingInterrupt
 from ..core.config import settings
 from ..core.logger import get_logger
 from .guardrails import check_input, check_output
-from .sessions import make_config
+from ..session import make_config
 from ..agent import graph
 
 router = APIRouter()
