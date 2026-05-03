@@ -1,11 +1,11 @@
 # Wealth Advisor
 
-An AI-powered UK wealth and retirement planning chatbot. Have a natural conversation about your retirement goals, pension pot projections, savings targets, and income planning. The LLM runs entirely on your own Mac via Ollama — no API key or internet required.
+An Agentic chatbot for wealth and retirement planning. Have a natural conversation about your retirement goals, pension pot projections, savings targets, and income planning. The LLM runs entirely on your own Mac via Ollama — no API key or internet required.
 
 ## What it does
 
 - **Conversational chat** — ask questions naturally, receive follow-up advice across multiple turns
-- **Agentic tool selection** — the AI automatically picks the right financial calculation tool for each question
+- **Agentic tool selection** — the LLM automatically picks the right financial calculation tool for each question
 - **Deterministic math** — all projections use hardcoded financial formulas (compound growth, drawdown, inflation), not AI guesswork
 - **Human-in-the-loop** — before any calculation runs, you see the tool and its inputs and can approve or reject
 - **Clarification flow** — when the AI needs missing data mid-conversation, it pauses and asks you
