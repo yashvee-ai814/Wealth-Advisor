@@ -1,133 +1,154 @@
 # Wealth Advisor
 
-An AI-powered UK wealth and retirement planning chatbot. Ask questions naturally about pension pots, retirement income, savings targets, and inflation — the agent picks the right calculation tool, shows you what it's about to run, and waits for your approval before executing it. The LLM runs entirely on your Mac via Ollama — no API key or cloud dependency.
-
----
+An Agentic chatbot for wealth and retirement planning. Have a natural conversation about your retirement goals, pension pot projections, savings targets, and income planning. The LLM runs entirely on your own Mac via Ollama — no API key or internet required.
 
 ## What it does
 
-- **Conversational planning** — multi-turn chat that remembers context across your session
-- **Agentic tool selection** — the LLM decides which financial calculation to run based on your question
-- **Deterministic math** — all projections use hardcoded financial formulas (compound growth, drawdown, inflation), never AI estimates
-- **Human-in-the-loop approval** — before any calculation runs you see the tool and its inputs; you approve or reject
-- **Clarification flow** — when the agent needs missing data it pauses and asks rather than guessing
-- **Guardrails** — input and output safety checks block injection attempts, harmful content, and off-topic requests
+- **Conversational chat** — ask questions naturally, receive follow-up advice across multiple turns
+- **Agentic tool selection** — the LLM automatically picks the right financial calculation tool for each question
+- **Deterministic math** — all projections use hardcoded financial formulas (compound growth, drawdown, inflation), not AI guesswork
+- **Human-in-the-loop** — before any calculation runs, you see the tool and its inputs and can approve or reject
+- **Clarification flow** — when the AI needs missing data mid-conversation, it pauses and asks you
+
+---
+
+## Problem Statement
+
+Retirement planning is complex, jargon-heavy, and deeply personal — yet most people have nowhere to turn for clear, scenario-specific guidance:
+
+- Generic online calculators offer one-size-fits-all outputs with no room for follow-up questions
+- Financial advisers are costly and inaccessible for the average saver
+- Pension documentation is dense and difficult to interpret without domain expertise
+- There is no accessible platform where individuals can ask retirement questions in plain language and receive personalised, calculated answers
+
+---
+
+## Solution
+
+Wealth Advisor is an agentic AI chatbot built specifically for retirement and pension planning:
+
+- Engages users in a natural, multi-turn conversation about their financial situation
+- Automatically selects and runs the correct financial calculation tool based on the user's question
+- Uses deterministic formulas — not AI estimation — for all projections (compound growth, drawdown, inflation adjustment)
+- Pauses before executing any calculation so the user can review and approve the inputs
+- Requests any missing information mid-conversation before proceeding
+
+---
+
+## Benefits
+
+- **Conversational access** — ask retirement questions in plain English, with no financial jargon required
+- **Personalised calculations** — projections are based on your specific numbers: age, savings, income goal, and retirement date
+- **Transparency and control** — every tool call and its inputs are shown to you before execution; you approve or reject each one
+- **Iterative planning** — refine your scenario across multiple turns without starting over
+
+---
+
+## Future Scope
+
+- **Pension document comprehension** — upload and query pension scheme documents; the chatbot explains entitlements, rules, and projections in plain language
+- **Deeper personalisation** — support for defined-benefit schemes, multiple pension pots, tax-relief modelling, and state pension forecasting
+- **Scenario comparison** — model and compare multiple retirement strategies side-by-side in a single session
+- **Regulated guidance integration** — structured signposting to FCA-regulated resources when advice thresholds are reached
 
 ---
 
 ## Architecture
 
 ```mermaid
-sequenceDiagram
-    actor User
-    participant FE as React Frontend :5173
-    participant BE as FastAPI Backend :8000
-    participant GR as Guardrails
-    participant AG as LangGraph Agent
-    participant OL as Ollama :11434
-    participant TL as Tools (math)
+graph TD
+    User(["👤 Browser :5173"])
+    FE["⚛️ Frontend\nReact + Vite + Tailwind"]
+    BE["🐍 Backend\nFastAPI + LangGraph"]
+    OL["🤖 Ollama\ngpt-oss:120b-cloud\n(Mac host :11434)"]
 
-    User->>FE: types message
-    FE->>BE: POST /chat {session_id, message}
-    BE->>GR: check_input(message)
-    GR-->>BE: ok / blocked
+    User -->|"HTTP"| FE
+    FE -->|"POST /chat"| BE
+    BE -->|"ChatOllama\nOpenAI-compatible"| OL
 
-    BE->>AG: graph.invoke({messages})
-    AG->>OL: llm_with_tools.invoke(messages)
-    OL-->>AG: AIMessage with tool_calls
+    subgraph agent ["LangGraph Agent Graph"]
+        AN["agent_node\n(LLM decides tools)"]
+        HA["human_approval_node\n(interrupt — await user)"]
+        TN["ToolNode\n(execute tools)"]
 
-    alt ask_human tool
-        AG->>AG: interrupt(question)
-        AG-->>BE: awaiting_clarification
-        BE-->>FE: status=awaiting_clarification
-        FE-->>User: ClarificationCard shown
-        User->>FE: types answer
-        FE->>BE: POST /chat {resume_input: {answer}}
-        BE->>AG: graph.invoke(Command(resume=...))
-    else calculation tools
-        AG->>AG: interrupt(tool_approval)
-        AG-->>BE: awaiting_tool_approval
-        BE-->>FE: status=awaiting_tool_approval
-        FE-->>User: ToolApprovalCard shown
-        User->>FE: approves
-        FE->>BE: POST /chat {resume_input: {approved: true}}
-        BE->>AG: graph.invoke(Command(resume=...))
-        AG->>TL: ToolNode executes tools
-        TL-->>AG: results
-        AG->>OL: llm_with_tools.invoke(messages + results)
-        OL-->>AG: final AIMessage
+        AN -->|"tool calls\n(non-ask_human)"| HA
+        AN -->|"ask_human call"| TN
+        AN -->|"no tools"| END(["END"])
+        HA -->|"approved"| TN
+        HA -->|"rejected → ToolMessages"| AN
+        TN -->|"results"| AN
     end
 
-    AG-->>BE: messages
-    BE->>GR: check_output(reply)
-    BE-->>FE: {reply, status, tool_calls_used}
-    FE-->>User: renders response
+    BE --> agent
 ```
 
----
+### Service ports
 
-## Tech stack
+| Service | Port | Description |
+|---------|------|-------------|
+| frontend | 5173 | React dev server (Vite) |
+| backend | 8000 | FastAPI REST API |
+| ollama | 11434 | LLM runtime on Mac host |
 
-| Layer | Choice |
-|---|---|
-| Backend language | Python 3.12+ |
-| Web framework | FastAPI |
-| Agent orchestration | LangGraph |
-| LLM integration | langchain-ollama (ChatOllama) |
-| Validation | Pydantic v2 |
-| Package manager | uv |
-| Frontend | React 18 + Vite 5 + Tailwind CSS v3 |
-| LLM runtime | Ollama (local, no API key needed) |
-| Model | `gpt-oss:120b-cloud` |
-| Containers | Docker + Docker Compose |
+### MCP tools (pure Python math — no LLM in calculations)
+
+| Tool | Formula |
+|------|---------|
+| `calculate_projected_pot` | `FV = PV*(1+r)^n + PMT*((1+r)^n-1)/r` |
+| `calculate_drawdown_income` | `income = pot * drawdown_rate + state_pension` |
+| `calculate_monthly_savings_needed` | Rearranged FV annuity for PMT |
+| `calculate_shortfall` | `max(0, income_goal - projected_income)` |
+| `calculate_readiness_score` | `min(100, projected/goal * 100)` → score + label |
+| `calculate_inflation_adjusted_goal` | `FV = goal * (1 + inflation)^years` |
+| `get_uk_state_pension_info` | £11,502/yr from age 67 lookup |
+| `ask_human` | Triggers `interrupt()` to pause for clarification |
 
 ---
 
 ## Prerequisites
 
-| Requirement | Notes |
-|---|---|
-| [Ollama](https://ollama.com) | Must be running on your Mac |
-| `gpt-oss:120b-cloud` model | `ollama pull gpt-oss:120b-cloud` |
-| Python 3.12+ | For local backend dev |
-| [uv](https://github.com/astral-sh/uv) | `pip install uv` |
-| Node.js 20+ | For local frontend dev |
-| Docker Desktop | For Docker-based setup only |
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
+- Ollama installed on Mac:
+  ```bash
+  brew install ollama
+  ```
+- Model pulled:
+  ```bash
+  ollama pull gpt-oss:120b-cloud
+  ```
 
 ---
 
-## Quick start — Docker
+## How to run (Docker)
 
 ```bash
-# 1. Start Ollama on your Mac
+# Step 1 — start Ollama on your Mac
 ollama serve
 
-# 2. Build and start all services
+# Step 2 — build and start all services
 docker compose up --build
 
-# 3. Open the app
+# Step 3 — open the app
 open http://localhost:5173
 ```
 
 ---
 
-## Quick start — Local
+## Local dev (no Docker)
 
 ```bash
-# Tab 1 — LLM runtime (always on Mac host)
+# Tab 1 — Ollama
 ollama serve
 
 # Tab 2 — Backend
 cd backend
 uv sync
 uv run uvicorn app.main:app --reload
-# API available at http://localhost:8000
 
 # Tab 3 — Frontend
 cd frontend
 npm install
 npm run dev
-# App available at http://localhost:5173
 ```
 
 ---
@@ -144,23 +165,19 @@ Wealth-Advisor/
 │   ├── Dockerfile
 │   ├── pyproject.toml
 │   └── app/
-│       ├── main.py              FastAPI app, CORS, middleware
-│       ├── session.py           WealthAdvisorState, MemorySaver, make_config()
-│       ├── core/
-│       │   ├── config.py        Pydantic settings (OLLAMA_BASE_URL, OLLAMA_MODEL)
-│       │   ├── logger.py        Shared logger factory
-│       │   └── middleware.py    HTTP request/response logging
-│       ├── agent/
-│       │   ├── __init__.py      Exports compiled graph
-│       │   ├── graph.py         LangGraph StateGraph assembly
-│       │   ├── nodes.py         agent_node, human_approval_node, routing functions
-│       │   └── tools.py         8 financial calculation tools + ask_human
-│       ├── router/
-│       │   ├── router.py        /health, POST /chat, DELETE /chat/{id}
-│       │   ├── models.py        ChatRequest, ChatResponse, ToolCallInfo, PendingInterrupt
-│       │   └── guardrails.py    Input/output safety checks
-│       └── data/
-│           └── prompts.json     System prompt and guardrail response messages
+│       ├── main.py          ← FastAPI app + CORS
+│       ├── router.py        ← /health, /chat, DELETE /chat/{id}
+│       ├── models.py        ← all Pydantic models (ChatRequest, ChatResponse, …)
+│       ├── config.py        ← pydantic-settings (OLLAMA_BASE_URL, OLLAMA_MODEL)
+│       ├── llm.py           ← ChatOllama client builder
+│       ├── data/
+│       │   └── prompts.json ← system prompt
+│       └── agent/
+│           ├── __init__.py  ← exports graph
+│           ├── state.py     ← WealthAdvisorState (LangGraph state)
+│           ├── tools.py     ← 8 MCP tools with Pydantic I/O models
+│           ├── nodes.py     ← agent_node, human_approval_node, routing functions
+│           └── graph.py     ← StateGraph assembly + compiled graph
 │
 └── frontend/
     ├── Dockerfile
@@ -170,33 +187,28 @@ Wealth-Advisor/
     ├── index.html
     └── src/
         ├── main.jsx
-        ├── App.jsx
+        ├── App.jsx          ← root component + session management
         ├── index.css
         ├── api/
-        │   └── chat.ts          sendMessage, resumeInterrupt, clearChat
+        │   └── chat.ts      ← sendMessage, resumeInterrupt, clearChat
         ├── types/
-        │   └── chat.ts          TypeScript interfaces mirroring Pydantic models
+        │   └── chat.ts      ← TypeScript interfaces mirroring Pydantic models
         ├── context/
-        │   └── ThemeContext.jsx  Dark/light mode context
-        ├── layouts/
-        │   └── AppLayout.jsx    Sidebar + main content shell
-        ├── pages/
-        │   └── ChatPage.jsx     Session management and chat logic
+        │   └── ThemeContext.jsx
         └── components/
-            ├── chat/
-            │   ├── ChatWindow.jsx        Message list container
-            │   ├── ChatInput.jsx         Textarea and send button
-            │   ├── MessageBubble.jsx     User/assistant message display
-            │   ├── FormattedMessage.jsx  Markdown and special block rendering
-            │   ├── ToolCallMessage.jsx   Executed tools display
-            │   ├── ToolApprovalCard.jsx  Tool approval UI
-            │   ├── ClarificationCard.jsx Clarification question input
-            │   └── WelcomeScreen.jsx     Landing screen with example scenarios
-            ├── navigation/
-            │   └── Sidebar.jsx          Session list and new chat button
-            └── shared/
-                ├── LoadingSpinner.jsx   Loading indicator
-                └── ToolCallBadge.jsx    Small tool name badge
+            ├── chat/        ← UI shell components
+            │   ├── ChatWindow.jsx
+            │   ├── ChatInput.jsx
+            │   ├── MessageBubble.jsx
+            │   ├── FormattedMessage.jsx
+            │   ├── WelcomeScreen.jsx
+            │   ├── Sidebar.jsx
+            │   └── LoadingSpinner.jsx
+            └── tools/       ← agent interaction components
+                ├── ToolApprovalCard.jsx
+                ├── ToolCallMessage.jsx
+                ├── ToolCallBadge.jsx
+                └── ClarificationCard.jsx
 ```
 
 ---
@@ -204,24 +216,44 @@ Wealth-Advisor/
 ## API endpoints
 
 | Method | Path | Description |
-|---|---|---|
-| `GET` | `/health` | Returns `{"status": "ok", "model": "..."}` |
-| `POST` | `/chat` | Send a message or resume an interrupt |
-| `DELETE` | `/chat/{session_id}` | Signals a session reset (frontend generates a new session ID) |
+|--------|------|-------------|
+| GET | `/health` | Health check + active model name |
+| POST | `/chat` | Send a message or resume an interrupt |
+| DELETE | `/chat/{session_id}` | Clear session (start fresh) |
 
-See [backend/README.md](backend/README.md) for full request/response schemas and tool reference.
+### POST /chat — send a message
+
+```json
+{
+  "session_id": "session-abc123",
+  "message": "I'm 40, earn £70k, want to retire at 65 with £40k/yr"
+}
+```
+
+### POST /chat — resume after tool-approval interrupt
+
+```json
+{ "session_id": "session-abc123", "resume_input": { "approved": true } }
+```
+
+### POST /chat — resume after clarification interrupt
+
+```json
+{ "session_id": "session-abc123", "resume_input": { "answer": "My pension pot is £30,000" } }
+```
 
 ---
 
-## Financial tools
+## Tech stack
 
-| Tool | What it calculates |
-|---|---|
-| `calculate_projected_pot` | Future pension pot value using compound growth annuity formula |
-| `calculate_drawdown_income` | Annual retirement income from pot via sustainable drawdown |
-| `calculate_monthly_savings_needed` | Monthly savings required to hit a target pot |
-| `calculate_shortfall` | Annual income gap (or surplus) versus retirement goal |
-| `calculate_readiness_score` | 0–100 readiness score with label (On track / Needs attention / At risk) |
-| `calculate_inflation_adjusted_goal` | Inflates today's income goal to future money |
-| `get_uk_state_pension_info` | UK state pension amount (£11,502/yr) and eligibility from age 67 |
-| `ask_human` | Pauses the workflow to ask the user a clarifying question |
+| Layer | Choice |
+|-------|--------|
+| Language | Python 3.12+ |
+| Web framework | FastAPI |
+| Agent orchestration | LangGraph |
+| LLM integration | langchain-ollama (OpenAI-compatible) |
+| Validation | Pydantic v2 (tools, nodes, state, API) |
+| Package manager | uv |
+| Frontend | React 18 + Vite 5 + Tailwind CSS v3 |
+| LLM runtime | Ollama (local, no API key) |
+| Containers | Docker + Docker Compose |
