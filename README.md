@@ -12,6 +12,47 @@ An Agentic chatbot for wealth and retirement planning. Have a natural conversati
 
 ---
 
+## Problem Statement
+
+Retirement planning is complex, jargon-heavy, and deeply personal — yet most people have nowhere to turn for clear, scenario-specific guidance:
+
+- Generic online calculators offer one-size-fits-all outputs with no room for follow-up questions
+- Financial advisers are costly and inaccessible for the average saver
+- Pension documentation is dense and difficult to interpret without domain expertise
+- There is no accessible platform where individuals can ask retirement questions in plain language and receive personalised, calculated answers
+
+---
+
+## Solution
+
+Wealth Advisor is an agentic AI chatbot built specifically for retirement and pension planning:
+
+- Engages users in a natural, multi-turn conversation about their financial situation
+- Automatically selects and runs the correct financial calculation tool based on the user's question
+- Uses deterministic formulas — not AI estimation — for all projections (compound growth, drawdown, inflation adjustment)
+- Pauses before executing any calculation so the user can review and approve the inputs
+- Requests any missing information mid-conversation before proceeding
+
+---
+
+## Benefits
+
+- **Conversational access** — ask retirement questions in plain English, with no financial jargon required
+- **Personalised calculations** — projections are based on your specific numbers: age, savings, income goal, and retirement date
+- **Transparency and control** — every tool call and its inputs are shown to you before execution; you approve or reject each one
+- **Iterative planning** — refine your scenario across multiple turns without starting over
+
+---
+
+## Future Scope
+
+- **Pension document comprehension** — upload and query pension scheme documents; the chatbot explains entitlements, rules, and projections in plain language
+- **Deeper personalisation** — support for defined-benefit schemes, multiple pension pots, tax-relief modelling, and state pension forecasting
+- **Scenario comparison** — model and compare multiple retirement strategies side-by-side in a single session
+- **Regulated guidance integration** — structured signposting to FCA-regulated resources when advice thresholds are reached
+
+---
+
 ## Architecture
 
 ```mermaid
